@@ -24,6 +24,24 @@ import com.alibaba.csp.sentinel.node.Node;
 import com.alibaba.csp.sentinel.slots.nodeselector.NodeSelectorSlot;
 
 /**
+ * Context 上下文是 Sentinel 中一个比较难懂的概念。源码中是这样描述context类的：
+ *      This class holds metadata of current invocation
+ * 就是说在context中维护着当前调用链的元数据，那元数据有哪些呢，从context类的源码中可以看到有：
+ *      entranceNode：当前调用链的入口节点
+ *      curEntry：当前调用链的当前entry
+ *      node：与当前entry所对应的curNode（在 Entry 里面）
+ *      origin：当前调用链的调用源
+ *
+ * 每次进入一个资源时，就会创建一个上下文。相同的资源名可能会创建多个上下文。
+ *
+ * 每次调用 SphU.entry() 或 SphO.entry() 都需要在一个 context 中执行，如果没有当前执行时还没有 context，那么框架会使用默认的 context，默认的 context 是通过 MyContextUtil.myEnter() 创建的。
+ *
+ * 那如果我想自己在调用 SphU.entry() 或 SphO.entry() 前，自己创建一个context该怎么操作呢？那可以通过调用 ContextUtil.enter() 方法来创建。
+ *
+ * 另外context是保存在ThreadLocal中的，每次执行的时候会优先到ThreadLocal中获取。如果context为null时才会再次去创建一个context。
+ *
+ * 那什么时候context会被置为null并从ThreadLocal中清空呢？当Entry执行exit方法时，当当前entry的parent为null时，也就说明当前entry是最上层的节点了，此时要把保存在ThreadLocal中的context也清空掉。
+ *
  * This class holds metadata of current invocation:<br/>
  *
  * <ul>

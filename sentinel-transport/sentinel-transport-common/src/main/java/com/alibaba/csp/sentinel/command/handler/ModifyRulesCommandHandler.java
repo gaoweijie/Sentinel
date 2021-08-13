@@ -40,6 +40,10 @@ import com.alibaba.fastjson.JSONArray;
 import static com.alibaba.csp.sentinel.transport.util.WritableDataSourceRegistry.*;
 
 /**
+ * 这是更改规则的接口，该接口对外提供的服务为：http://localhost:8719/setRules?type=<XXXX>&data=<DATA>
+ * 其中，type 可以输入 flow、degrade 等方式来制定更改的规则种类，data 则是对应的 JSON 格式的规则。
+ * 类似的查询规则接口为{@link FetchActiveRuleCommandHandler}
+ *
  * @author jialiang.linjl
  * @author Eric Zhao
  */

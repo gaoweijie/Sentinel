@@ -22,6 +22,9 @@ import com.alibaba.csp.sentinel.slots.statistic.data.MetricBucket;
 import com.alibaba.csp.sentinel.util.function.Predicate;
 
 /**
+ * Metric 是 Sentinel 中用来进行实时数据统计的度量接口，node就是通过metric来进行数据统计的。而metric本身也并没有统计的能力，他也是通过Window来进行统计的。
+ * 具体的统计原理，可以参考笔者另一篇文章：《Sentinel 基于滑动时间窗口的实时指标统计原理分析》https://mp.weixin.qq.com/s/B1_7Kb_CxeKEAv43kdCWOA
+ *
  * Represents a basic structure recording invocation metrics of protected resources.
  *
  * @author jialiang.linjl

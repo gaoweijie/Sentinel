@@ -41,6 +41,11 @@ import com.alibaba.csp.sentinel.transport.config.TransportConfig;
 import com.alibaba.csp.sentinel.util.StringUtil;
 
 /***
+ * SimpleHttpCommandCenter 启动了一个 ServerSocket 来监听8719端口，也对外提供了一些 http 接口用以操作 sentinel-core 中的数据，
+ * 包括查询/更改规则，查询节点状态等。
+ *
+ * PS：控制台也是通过这些接口与 sentinel-core 进行数据交互的！
+ *
  * The simple command center provides service to exchange information.
  *
  * @author youji.zj
@@ -55,6 +60,16 @@ public class SimpleHttpCommandCenter implements CommandCenter {
     @SuppressWarnings("rawtypes")
     private static final Map<String, CommandHandler> handlerMap = new ConcurrentHashMap<String, CommandHandler>();
 
+    /**
+     * 当我运行FlowApplication的demo应用测试的场景：sentinel-core 在第一次规则被触发的时候，会通过spi扫描的方式启动一个并且仅启动
+     * 一个 CommandCenter，也就是我们引入的 sentinel-transport-simple-http 依赖中被引入的实现类：SimpleHttpCommandCenter。
+     *
+     * 这个 SimpleHttpCommandCenter 类中启动了两个线程池：主线程池{@link #executor}和业务线程池{@link #bizExecutor}。
+     *
+     * 主线程池启动了一个 ServerSocket 来监听默认的 8719 端口，如果端口被占用，会自动尝试获取下一个端口，直到绑定成功为止。
+     *
+     * 业务线程池主要是用来处理 ServerSocket 接收到的数据。
+     */
     @SuppressWarnings("PMD.ThreadPoolCreationRule")
     private ExecutorService executor = Executors.newSingleThreadExecutor(
         new NamedThreadFactory("sentinel-command-center-executor", true));
@@ -98,11 +113,13 @@ public class SimpleHttpCommandCenter implements CommandCenter {
             @Override
             public void run() {
                 boolean success = false;
+                // 获取可用的端口用以创建一个ServerSocket
                 ServerSocket serverSocket = getServerSocketFromBasePort(port);
 
                 if (serverSocket != null) {
                     CommandCenterLog.info("[CommandCenter] Begin listening at port " + serverSocket.getLocalPort());
                     socketReference = serverSocket;
+                    // 在主线程中启动ServerThread用以接收socket请求
                     executor.submit(new ServerThread(serverSocket));
                     success = true;
                     port = serverSocket.getLocalPort();
@@ -187,6 +204,7 @@ public class SimpleHttpCommandCenter implements CommandCenter {
                 try {
                     socket = this.serverSocket.accept();
                     setSocketSoTimeout(socket);
+                    // 将接收到的socket封装到HttpEventTask中由业务线程去处理
                     HttpEventTask eventTask = new HttpEventTask(socket);
                     bizExecutor.submit(eventTask);
                 } catch (Exception e) {

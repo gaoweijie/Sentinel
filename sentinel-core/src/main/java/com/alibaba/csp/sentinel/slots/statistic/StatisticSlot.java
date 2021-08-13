@@ -33,6 +33,8 @@ import com.alibaba.csp.sentinel.slotchain.ResourceWrapper;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 
 /**
+ * 功能职责：用于记录，统计不同纬度的 runtime 信息；
+ *
  * <p>
  * A processor slot that dedicates to real time statistics.
  * When entering this slot, we need to separately count the following
@@ -51,14 +53,28 @@ import com.alibaba.csp.sentinel.slots.block.BlockException;
 @Spi(order = Constants.ORDER_STATISTIC_SLOT)
 public class StatisticSlot extends AbstractLinkedProcessorSlot<DefaultNode> {
 
+    /**
+     * 第一部分是entry方法：
+     *  该方法首先会触发后续slot的entry方法，即SystemSlot、FlowSlot、DegradeSlot等的规则，
+     *  如果规则不通过，就会抛出BlockException，则会在node中统计被block的数量。
+     *  反之会在node中统计通过的请求数和线程数等信息。
+     *  整理一下即是：
+     *      1.通过node中的当前的实时统计指标信息进行规则校验
+     *      2.如果通过了校验，则重新更新node中的实时指标数据
+     *      3.如果被block或出现了异常了，则重新更新node中block的指标或异常指标
+     *
+     *  所有的实时指标的统计都是在node中进行的。这些统计的实时数据会被后续的校验规则所使用，具体的统计方式是通过 滑动窗口 来实现的。
+     */
     @Override
     public void entry(Context context, ResourceWrapper resourceWrapper, DefaultNode node, int count,
                       boolean prioritized, Object... args) throws Throwable {
         try {
-            // Do some checking.
+            // Do some checking.TODO ： 这个注释应该是作者写错了
+            // 触发下一个Slot的entry方法
             fireEntry(context, resourceWrapper, node, count, prioritized, args);
 
             // Request passed, add thread count and pass count.
+            // 如果能通过SlotChain中后面的Slot的entry方法，说明没有被限流或降级，那么进行信息统计
             node.increaseThreadNum();
             node.addPassRequest(count);
 
@@ -122,6 +138,12 @@ public class StatisticSlot extends AbstractLinkedProcessorSlot<DefaultNode> {
         }
     }
 
+    /**
+     * 第二部分是在exit方法中：
+     *      当退出该Entry入口时，会统计rt的时间，并减少线程数。
+     *
+     * 这些统计的实时数据会被后续的校验规则所使用，具体的统计方式是通过 滑动窗口 来实现的。
+     */
     @Override
     public void exit(Context context, ResourceWrapper resourceWrapper, int count, Object... args) {
         Node node = context.getCurNode();

@@ -40,11 +40,16 @@ import com.alibaba.csp.sentinel.util.TimeUtil;
  */
 public abstract class LeapArray<T> {
 
+    // 时间窗口的长度
     protected int windowLengthInMs;
+    // 采样窗口的个数
     protected int sampleCount;
+    // 以毫秒为单位的时间间隔
     protected int intervalInMs;
+    // 以秒为单位的时间间隔
     private double intervalInSecond;
 
+    // 采样的时间窗口数组
     protected final AtomicReferenceArray<WindowWrap<T>> array;
 
     /**
@@ -53,6 +58,8 @@ public abstract class LeapArray<T> {
     private final ReentrantLock updateLock = new ReentrantLock();
 
     /**
+     * LeapArray对象
+     *
      * The total bucket count is: {@code sampleCount = intervalInMs / windowLengthInMs}.
      *
      * @param sampleCount  bucket count of the sliding window
@@ -78,7 +85,7 @@ public abstract class LeapArray<T> {
      */
     public WindowWrap<T> currentWindow() {
         return currentWindow(TimeUtil.currentTimeMillis());
-    }
+    }nxia
 
     /**
      * Create a new statistic value for bucket.
@@ -98,8 +105,10 @@ public abstract class LeapArray<T> {
     protected abstract WindowWrap<T> resetWindowTo(WindowWrap<T> windowWrap, long startTime);
 
     private int calculateTimeIdx(/*@Valid*/ long timeMillis) {
+        // timeMillis每增加一个windowLength的长度，timeId就会增加1，时间窗口就会往前滑动一个
         long timeId = timeMillis / windowLengthInMs;
         // Calculate current index so we can map the timestamp to the leap array.
+        // idx被分成[0,arrayLength-1]中的某一个数，作为array数组中的索引
         return (int)(timeId % array.length());
     }
 
@@ -108,6 +117,17 @@ public abstract class LeapArray<T> {
     }
 
     /**
+     * 初次看到这段代码时，可能会觉得有点懵，但是细细的分析一下，实际可以把他分成以下几步：
+     *
+     * - 1.根据当前时间，算出当前窗口在采样窗口数组中的索引idx
+     * - 2.根据当前时间算出当前窗口的应该对应的开始时间time，以毫秒为单位
+     * - 3.根据索引idx，在采样窗口数组中取得一个时间窗口old
+     * - 4.循环判断直到获取到一个当前时间窗口
+     *   - 4.1.如果old为空，则创建一个时间窗口，并将它插入到array的第idx个位置，array上面已经分析过了，是一个 `AtomicReferenceArray`
+     *   - 4.2.如果当前窗口的开始时间time与old的开始时间相等，那么说明old就是当前时间窗口，直接返回old
+     *   - 4.3.如果当前窗口的开始时间time大于old的开始时间，则说明old窗口已经过时了，将old的开始时间更新为最新值：time，下个循环中会在步骤4.2中返回
+     *   - 4.4.如果当前窗口的开始时间time小于old的开始时间，实际上这种情况是不可能存在的，因为time是当前时间，old是过去的一个时间
+     *
      * Get bucket item at provided timestamp.
      *
      * @param timeMillis a valid timestamp in milliseconds
@@ -130,7 +150,9 @@ public abstract class LeapArray<T> {
          * (3) Bucket is deprecated, then reset current bucket and clean all deprecated buckets.
          */
         while (true) {
+            // 从采样数组中根据索引获取缓存的时间窗口
             WindowWrap<T> old = array.get(idx);
+            // array数组长度不宜过大，否则old很多情况下都命中不了，就会创建很多个WindowWrap对象
             if (old == null) {
                 /*
                  *     B0       B1      B2    NULL      B4
@@ -144,14 +166,18 @@ public abstract class LeapArray<T> {
                  * then try to update circular array via a CAS operation. Only one thread can
                  * succeed to update, while other threads yield its time slice.
                  */
+                // 如果没有获取到，则创建一个新的
                 WindowWrap<T> window = new WindowWrap<T>(windowLengthInMs, windowStart, newEmptyBucket(timeMillis));
+                // 通过CAS将新窗口设置到数组中去
                 if (array.compareAndSet(idx, null, window)) {
                     // Successfully updated, return the created bucket.
                     return window;
                 } else {
                     // Contention failed, the thread will yield its time slice to wait for bucket available.
+                    // 否则当前线程让出时间片，等待
                     Thread.yield();
                 }
+            // 如果当前窗口的开始时间与old的开始时间相等，则直接返回old窗口
             } else if (windowStart == old.windowStart()) {
                 /*
                  *     B0       B1      B2     B3      B4
@@ -165,6 +191,7 @@ public abstract class LeapArray<T> {
                  * that means the time is within the bucket, so directly return the bucket.
                  */
                 return old;
+            // 如果当前时间窗口的开始时间已经超过了old窗口的开始时间，则放弃old窗口，并将time设置为新的时间窗口的开始时间，此时窗口向前滑动
             } else if (windowStart > old.windowStart()) {
                 /*
                  *   (old)
@@ -175,7 +202,7 @@ public abstract class LeapArray<T> {
                  *                           time=1676
                  *          startTime of Bucket 2: 400, deprecated, should be reset
                  *
-                 * If the start timestamp of old bucket is behind provided time, that means
+                 * If the start timestamp of old bucket is behindprovided  time, that means
                  * the bucket is deprecated. We have to reset the bucket to current {@code windowStart}.
                  * Note that the reset and clean-up operations are hard to be atomic,
                  * so we need a update lock to guarantee the correctness of bucket update.
@@ -194,6 +221,7 @@ public abstract class LeapArray<T> {
                     // Contention failed, the thread will yield its time slice to wait for bucket available.
                     Thread.yield();
                 }
+            // 这个条件不可能存在
             } else if (windowStart < old.windowStart()) {
                 // Should not go through here, as the provided time is already behind.
                 return new WindowWrap<T>(windowLengthInMs, windowStart, newEmptyBucket(timeMillis));

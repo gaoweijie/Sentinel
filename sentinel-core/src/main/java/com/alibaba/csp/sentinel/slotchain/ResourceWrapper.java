@@ -19,6 +19,15 @@ import com.alibaba.csp.sentinel.EntryType;
 import com.alibaba.csp.sentinel.util.AssertUtil;
 
 /**
+ * 资源是 Sentinel 的关键概念。它可以是 Java 应用程序中的任何内容，例如，由应用程序提供的服务，或由应用程序调用的其它服务，甚至可以是一段代码。
+ * 只要通过 Sentinel API 定义的代码，就是资源，能够被 Sentinel 保护起来。大部分情况下，可以使用方法签名，URL，甚至服务名称作为资源名来标示资源。
+ * 简单来说，资源就是 Sentinel 用来保护系统的一个媒介。
+ *
+ * 在 Sentinel 中具体表示资源的类是：ResourceWrapper ，他是一个抽象的包装类，包装了资源的 Name 和EntryType。
+ * 他有两个实现类，分别是：StringResourceWrapper 和 MethodResourceWrapper
+ *      StringResourceWrapper 顾名思义，是通过对一串字符串进行包装，是一个通用的资源包装类
+ *      MethodResourceWrapper 是对方法调用的包装。
+ *
  * A wrapper of resource name and type.
  *
  * @author qinan.qn

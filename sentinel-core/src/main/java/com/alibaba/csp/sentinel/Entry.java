@@ -24,6 +24,14 @@ import com.alibaba.csp.sentinel.slotchain.ResourceWrapper;
 import com.alibaba.csp.sentinel.context.Context;
 
 /**
+ * Entry 是 Sentinel 中用来表示是否通过限流的一个凭证，就像一个token一样。
+ * 每次执行 SphU.entry() 或 SphO.entry() 都会返回一个 Entry 给调用者，意思就是告诉调用者：
+ * 如果正确返回了 Entry 给你，那表示你可以正常访问被 Sentinel 保护的后方服务了，
+ * 否则 Sentinel 会抛出一个BlockException(如果是 SphO.entry() 会返回false)，这就表示调用者想要访问的服务被保护了，也就是说调用者本身被限流了。
+ *
+ * 当在一个上下文中多次调用了 SphU.entry() 方法时，就会创建一个调用树，这个树的节点之间是通过parent和child关系维持的。
+ * 需要注意的是：parent和child是在 CtSph 类的一个私有内部类 CtEntry 中定义的，CtEntry 是 Entry 的一个子类。 由于context中总是保存着调用链树中的当前入口，所以当当前entry执行exit退出时，需要将parent设置为当前入口。
+ *
  * Each {@link SphU}#entry() will return an {@link Entry}. This class holds information of current invocation:<br/>
  *
  * <ul>
@@ -55,11 +63,15 @@ public abstract class Entry implements AutoCloseable {
 
     private static final Object[] OBJECTS0 = new Object[0];
 
+    // 当前Entry的创建时间，主要用来后期计算rt
     private final long createTimestamp;
+    // 当前Entry的完成时间，主要用来后期计算rt
     private long completeTimestamp;
 
+    // 当前Entry所关联的node，该node主要是记录了当前context下该资源的统计信息
     private Node curNode;
     /**
+     * 当前Entry的调用来源，通常是调用方的应用名称，在 ClusterBuilderSlot.entry() 方法中设置的
      * {@link Node} of the specific origin, Usually the origin is the Service Consumer.
      */
     private Node originNode;
@@ -67,6 +79,7 @@ public abstract class Entry implements AutoCloseable {
     private Throwable error;
     private BlockException blockError;
 
+    // 当前Entry所关联的资源
     protected final ResourceWrapper resourceWrapper;
 
     public Entry(ResourceWrapper resourceWrapper) {

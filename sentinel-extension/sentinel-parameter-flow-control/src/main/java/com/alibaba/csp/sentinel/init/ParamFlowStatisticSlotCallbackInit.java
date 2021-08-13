@@ -20,6 +20,8 @@ import com.alibaba.csp.sentinel.slots.statistic.ParamFlowStatisticExitCallback;
 import com.alibaba.csp.sentinel.slots.statistic.StatisticSlotCallbackRegistry;
 
 /**
+ * 热点参数限流中 StatisticSlot 回调的初始化
+ *
  * Init function for adding callbacks to {@link StatisticSlotCallbackRegistry} to record metrics
  * for frequent parameters in {@link com.alibaba.csp.sentinel.slots.statistic.StatisticSlot}.
  *

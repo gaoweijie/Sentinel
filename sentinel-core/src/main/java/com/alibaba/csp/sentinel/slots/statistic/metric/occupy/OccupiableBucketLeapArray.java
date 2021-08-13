@@ -30,6 +30,10 @@ public class OccupiableBucketLeapArray extends LeapArray<MetricBucket> {
 
     private final FutureBucketLeapArray borrowArray;
 
+    /**
+     * @param sampleCount   采样窗口的个数
+     * @param intervalInMs  以毫秒为单位的时间间隔
+     */
     public OccupiableBucketLeapArray(int sampleCount, int intervalInMs) {
         // This class is the original "CombinedBucketArray".
         super(sampleCount, intervalInMs);

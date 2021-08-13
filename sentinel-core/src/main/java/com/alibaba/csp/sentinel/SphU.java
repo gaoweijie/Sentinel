@@ -75,6 +75,8 @@ public class SphU {
     private SphU() {}
 
     /**
+     * 这个方法会去申请一个entry，如果能够申请成功，则说明没有被限流，否则会抛出BlockException，表示已经被限流了。
+     *
      * Record statistics and perform rule checking for the given resource.
      *
      * @param name the unique name of the protected resource

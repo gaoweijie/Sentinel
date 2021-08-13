@@ -18,6 +18,13 @@ package com.alibaba.csp.sentinel.slotchain;
 import com.alibaba.csp.sentinel.context.Context;
 
 /**
+ * sentinel的限流降级等功能，主要是通过一个SlotChain实现的。在链式插槽中，有7个核心的Slot，这些Slot各司其职，可以分为以下几种类型：
+ * 一、进行资源调用路径构造的NodeSelectorSlot和ClusterBuilderSlot
+ * 二、进行资源的实时状态统计的StatisticsSlot
+ * 三、进行系统流量防护，黑白名单，限流，熔断降级等规则校验的SystemSlot、AuthoritySlot、FlowSlot、DegradeSlot
+ *
+ * 后面几个Slot依赖于前面几个Slot统计的结果。至此，每种Slot的功能已经基本分析清楚了。
+ *
  * @author qinan.qn
  * @author jialiang.linjl
  */

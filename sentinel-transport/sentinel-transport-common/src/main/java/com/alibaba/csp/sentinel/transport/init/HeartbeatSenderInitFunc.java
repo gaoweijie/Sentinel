@@ -30,6 +30,8 @@ import com.alibaba.csp.sentinel.transport.HeartbeatSender;
 import com.alibaba.csp.sentinel.transport.config.TransportConfig;
 
 /**
+ * HeartBeat 的初始化与心跳发送
+ *
  * Global init function for heartbeat sender.
  *
  * @author Eric Zhao
@@ -84,6 +86,13 @@ public class HeartbeatSenderInitFunc implements InitFunc {
     }
 
     private void scheduleHeartbeatTask(/*@NonNull*/ final HeartbeatSender sender, /*@Valid*/ long interval) {
+        /**
+         * sentinel-core 连接上 dashboard 之后，并不是就结束了，事实上 sentinel-core 是通过一个 ScheduledExecutorService 的定时任务，
+         * 每隔 10 秒钟向 dashboard 发送一次心跳信息。发送心跳的目的主要是告诉 dashboard 我这台 sentinel 的实例还活着，你可以继续向我请求数据。
+         *
+         * 这也就是为什么 dashboard 中每个 app 对应的机器列表要用 Set 来保存的原因，如果用 List 来保存的话就可能存在同一台机器保存了多次的情况。
+         * 心跳可以维持双方之间的连接是正常的，但是也有可能因为各种原因，某一方或者双方都离线了，那他们之间的连接就丢失了。
+         */
         pool.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {

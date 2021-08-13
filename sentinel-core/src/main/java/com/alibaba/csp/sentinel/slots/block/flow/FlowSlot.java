@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 功能职责：主要是根据前面 slot 统计好的信息，与预设的限流规则进行校验，如果规则校验不通过则进行限流；
+ *
  * <p>
  * Combined the runtime statistics collected from the previous
  * slots (NodeSelectorSlot, ClusterNodeBuilderSlot, and StatisticSlot), FlowSlot

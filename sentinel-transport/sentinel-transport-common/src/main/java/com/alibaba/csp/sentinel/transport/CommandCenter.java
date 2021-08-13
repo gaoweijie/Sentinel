@@ -16,6 +16,8 @@
 package com.alibaba.csp.sentinel.transport;
 
 /**
+ * 该接口主要用来在 sentinel-core 中启动一个可以对外提供 api 接口的服务端，Sentinel 中默认有三个实现，分别是 http  springMvc 和 netty。但是官方默认推荐的是使用 http 的实现。
+ *
  * @author Eric Zhao
  */
 public interface CommandCenter {

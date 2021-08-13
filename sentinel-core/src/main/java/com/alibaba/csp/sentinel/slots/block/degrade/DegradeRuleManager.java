@@ -101,6 +101,8 @@ public final class DegradeRuleManager {
     }
 
     /**
+     * 修改降级规则
+     *
      * Load {@link DegradeRule}s, former rules will be replaced.
      *
      * @param rules new rules to load.

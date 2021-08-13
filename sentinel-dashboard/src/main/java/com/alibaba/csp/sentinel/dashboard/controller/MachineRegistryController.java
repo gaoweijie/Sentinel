@@ -39,6 +39,13 @@ public class MachineRegistryController {
     @Autowired
     private AppManagement appManagement;
 
+    /**
+     * dashboard启动后会等待客户端的连接，具体的做法是在 MachineRegistryController 中有一个 receiveHeartBeat 的方法，客户端发送心跳消息，就是通过http请求这个方法。
+     *
+     * dashboard接收到客户端的心跳消息后，会把客户端的传递过来的ip、port等信息封装成一个 MachineInfo 对象.
+     * 然后将该对象通过 MachineDiscovery 接口的 addMachine 方法添加到一个ConcurrentHashMap中保存起来。
+     * 这里会有问题，因为客户端的信息是保存在dashboard的内存中的，所以当dashboard应用重启后，之前已经发送过来的客户端信息都会丢失掉。
+     */
     @ResponseBody
     @RequestMapping("/machine")
     public Result<?> receiveHeartBeat(String app,

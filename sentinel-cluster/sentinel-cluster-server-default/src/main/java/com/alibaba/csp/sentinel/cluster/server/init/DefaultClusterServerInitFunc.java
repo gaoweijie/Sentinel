@@ -29,6 +29,8 @@ import com.alibaba.csp.sentinel.init.InitFunc;
 import com.alibaba.csp.sentinel.log.RecordLog;
 
 /**
+ * 集群服务端的初始化
+ *
  * @author Eric Zhao
  * @since 1.4.0
  */

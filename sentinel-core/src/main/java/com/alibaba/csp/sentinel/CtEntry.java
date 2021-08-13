@@ -27,6 +27,8 @@ import com.alibaba.csp.sentinel.slotchain.ResourceWrapper;
 import com.alibaba.csp.sentinel.util.function.BiConsumer;
 
 /**
+ * 同一个 Context 中对同一个resource进行多次entry()调用时，会形式一颗调用树，这个树是通过CtEntry之间的parent/child关系维护的。
+ *
  * Linked entry within current context.
  *
  * @author jialiang.linjl

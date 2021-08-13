@@ -51,7 +51,7 @@ public class FlowRuleManager {
     private static volatile Map<String, List<FlowRule>> flowRules = new HashMap<>();
 
     private static final FlowPropertyListener LISTENER = new FlowPropertyListener();
-    private static SentinelProperty<List<FlowRule>> currentProperty = new DynamicSentinelProperty<List<FlowRule>>();
+    private static SentinelProperty<List<FlowRule>> currentProperty = new DynamicSentinelProperty<>();
 
     @SuppressWarnings("PMD.ThreadPoolCreationRule")
     private static final ScheduledExecutorService SCHEDULER = Executors.newScheduledThreadPool(1,
@@ -68,7 +68,7 @@ public class FlowRuleManager {
      *     <li>If the flushInterval more than 0,
      * the timer will run with the flushInterval as the rate </li>.
      *      <li>If the flushInterval less than 0(include) or value is not valid,
-     * then means the timer will not be started </li>
+     * then means the timer will not be started </li>©∫
      * <ol></p>
      */
     private static void startMetricTimerListener() {
@@ -112,6 +112,8 @@ public class FlowRuleManager {
     }
 
     /**
+     * 动态更新流控规则
+     *
      * Load {@link FlowRule}s, former rules will be replaced.
      *
      * @param rules new rules to load.

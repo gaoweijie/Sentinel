@@ -16,6 +16,8 @@
 package com.alibaba.csp.sentinel.transport;
 
 /**
+ * 该接口主要是为 sentinel-core 用来向 sentinel-dashboard 发送心跳的，默认也有三个实现，分别是 http  springMvc 和 netty。
+ *
  * The heartbeat sender which is responsible for sending heartbeat to remote dashboard
  * periodically per {@code interval}.
  *

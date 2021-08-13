@@ -18,6 +18,11 @@ package com.alibaba.csp.sentinel;
 import com.alibaba.csp.sentinel.init.InitExecutor;
 
 /**
+ * 触发客户端连接控制台的入口类：
+ *
+ * 客户端与控制台的连接初始化是在 Env 的类中触发的，客户端配置好了与控制台的连接参数之后，并不会主动连接上控制台，
+ * 需要触发一次客户端的规则才会开始进行初始化，并向控制台发送心跳和客户端规则等信息。
+ *
  * Sentinel Env. This class will trigger all initialization for Sentinel.
  *
  * <p>

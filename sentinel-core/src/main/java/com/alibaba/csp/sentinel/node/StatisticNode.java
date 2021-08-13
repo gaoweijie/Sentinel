@@ -27,6 +27,8 @@ import com.alibaba.csp.sentinel.util.TimeUtil;
 import com.alibaba.csp.sentinel.util.function.Predicate;
 
 /**
+ * 执行具体的资源统计操作
+ *
  * <p>The statistic node keep three kinds of real-time statistics metrics:</p>
  * <ol>
  * <li>metrics in second level ({@code rollingCounterInSecond})</li>

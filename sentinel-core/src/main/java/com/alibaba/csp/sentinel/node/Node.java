@@ -24,6 +24,13 @@ import com.alibaba.csp.sentinel.slots.statistic.metric.DebugSupport;
 import com.alibaba.csp.sentinel.util.function.Predicate;
 
 /**
+ * Node 是用来保存某个资源的各种实时统计信息的，例如：passQps，blockQps，rt等实时数据。
+ * 通过访问节点，就可以获取到对应资源的实时状态（统计数据）。正是有了这些统计数据后， Sentinel 才能进行限流、降级等一系列的操作。
+ *
+ * 这里特别补充一个 DefaultNode 和 ClusterNode 的区别：
+ *      DefaultNode：保存着某个resource在某个context中的实时指标，每个DefaultNode都指向一个ClusterNode
+ *      ClusterNode：保存着某个resource在所有的context中实时指标的总和，同样的resource会共享同一个ClusterNode，不管他在哪个context中
+ *
  * Holds real-time statistics for resources.
  *
  * @author qinan.qn

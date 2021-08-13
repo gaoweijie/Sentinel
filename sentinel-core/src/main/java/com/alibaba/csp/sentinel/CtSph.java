@@ -114,8 +114,30 @@ public class CtSph implements Sph {
         return asyncEntryWithPriorityInternal(resourceWrapper, count, false, args);
     }
 
+    /**
+     * 这个方法可以分为以下几个部分：
+     *
+     *  1.对参数和全局配置项做检测，如果不符合要求就直接返回了一个CtEntry对象，不会再进行后面的限流检测，否则进入下面的检测流程。
+     *  2.根据包装过的资源对象获取对应的SlotChain
+     *  3.执行SlotChain的entry方法
+     *      3.1.如果SlotChain的entry方法抛出了BlockException，则将该异常继续向上抛出
+     *      3.2.如果SlotChain的entry方法正常执行了，则最后会将该entry对象返回
+     *  4.如果上层方法捕获了BlockException，则说明请求被限流了，否则请求能正常执行
+     * 其中比较重要的是第2、3两个步骤，我们来分解一下这两个步骤。
+     *
+     *
+     * @param resourceWrapper
+     * @param count
+     * @param prioritized
+     * @param args
+     * @return
+     * @throws BlockException
+     */
     private Entry entryWithPriority(ResourceWrapper resourceWrapper, int count, boolean prioritized, Object... args)
         throws BlockException {
+        /**
+         * 1.对参数和全局配置项做检测，如果不符合要求就直接返回了一个CtEntry对象，不会再进行后面的限流检测，否则进入下面的检测流程。
+         */
         Context context = ContextUtil.getContext();
         if (context instanceof NullContext) {
             // The {@link NullContext} indicates that the amount of context has exceeded the threshold,
@@ -133,6 +155,9 @@ public class CtSph implements Sph {
             return new CtEntry(resourceWrapper, null, context);
         }
 
+        /**
+         * 2、根据包装过的资源对象获取对应的SlotChain
+         */
         ProcessorSlot<Object> chain = lookProcessChain(resourceWrapper);
 
         /*
@@ -143,11 +168,21 @@ public class CtSph implements Sph {
             return new CtEntry(resourceWrapper, null, context);
         }
 
+        /**
+         * 3.执行SlotChain的entry方法
+         *      3.1.如果SlotChain的entry方法抛出了BlockException，则将该异常继续向上抛出
+         *      3.2.如果SlotChain的entry方法正常执行了，则最后会将该entry对象返回
+         */
         Entry e = new CtEntry(resourceWrapper, chain, context);
         try {
+            // lookProcessChain方法获得的ProcessorSlotChain的实例是DefaultProcessorSlotChain，那么执行chain.entry方法，就会执行DefaultProcessorSlotChain的entry方法。
+            // 这里是责任链模式处理方式来处理一个个的Slot节点
             chain.entry(context, resourceWrapper, null, count, prioritized, args);
         } catch (BlockException e1) {
             e.exit(count, args);
+            /**
+             * 4.如果上层方法捕获了BlockException，则说明请求被限流了，否则请求能正常执行
+             */
             throw e1;
         } catch (Throwable e1) {
             // This should not happen, unless there are errors existing in Sentinel internal.
@@ -203,8 +238,8 @@ public class CtSph implements Sph {
                     }
 
                     chain = SlotChainProvider.newSlotChain();
-                    Map<ResourceWrapper, ProcessorSlotChain> newMap = new HashMap<ResourceWrapper, ProcessorSlotChain>(
-                        chainMap.size() + 1);
+                    Map<ResourceWrapper, ProcessorSlotChain> newMap = new HashMap<>(
+                            chainMap.size() + 1);
                     newMap.putAll(chainMap);
                     newMap.put(resourceWrapper, chain);
                     chainMap = newMap;

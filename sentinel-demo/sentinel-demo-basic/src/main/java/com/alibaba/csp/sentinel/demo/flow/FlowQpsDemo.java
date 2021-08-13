@@ -30,6 +30,22 @@ import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 
 /**
+ * 参考sentinal-turial项目的sentinel-overall-introduce.md文件：</p>
+ *
+ * 可以看到，上面的结果中，pass的数量和我们的预期并不相同，我们预期的是每秒允许pass的请求数是20个，但是目前有很多pass的请求数是超过20个的。
+ *
+ * 原因是，我们这里测试的代码使用了多线程，注意看 threadCount 的值，一共有32个线程来模拟，而在RunTask的run方法中执行资源保护时，即在 SphU.entry 的内部是没有加锁的，所以就会导致在高并发下，pass的数量会高于20。
+ *
+ * 可以用下面这个模型来描述下，有一个TimeTicker线程在做统计，每1秒钟做一次。有N个RunTask线程在模拟请求，被访问的business code被资源key保护着，根据规则，每秒只允许20个请求通过。
+ *
+ * 由于pass、block、total等计数器是全局共享的，而多个RunTask线程在执行SphU.entry申请获取entry时，内部没有锁保护，所以会存在pass的个数超过设定的阈值。
+ *
+ * 那接下来我把 threadCount 的值改为1，只有一个线程来执行这个方法，看下具体的限流结果。可以看到pass数基本上维持在20，但是第一次统计的pass值还是超过了20。这又是什么原因导致的呢？
+ *
+ * 其实仔细看下Demo中的代码可以发现，模拟请求是用的一个线程，统计结果是用的另外一个线程，统计线程每1秒钟统计一次结果，这两个线程之间是有时间上的误差的。从TimeTicker线程打印出来的时间戳可以看出来，虽然每隔一秒进行统计，但是当前打印时的时间和上一次的时间还是有误差的，不完全是1000ms的间隔。
+ *
+ * 要真正验证每秒限制20个请求，保证数据的精准性，需要做基准测试，这个不是本篇文章的重点，有兴趣的同学可以去了解下jmh，sentinel中的基准测试也是通过jmh做的。
+ *
  * @author jialiang.linjl
  */
 public class FlowQpsDemo {
@@ -43,6 +59,7 @@ public class FlowQpsDemo {
     private static volatile boolean stop = false;
 
     private static final int threadCount = 32;
+//    private static final int threadCount = 1;
 
     private static int seconds = 60 + 40;
 
@@ -59,7 +76,7 @@ public class FlowQpsDemo {
     }
 
     private static void initFlowQpsRule() {
-        List<FlowRule> rules = new ArrayList<FlowRule>();
+        List<FlowRule> rules = new ArrayList<>();
         FlowRule rule1 = new FlowRule();
         rule1.setResource(KEY);
         // set limit qps to 20

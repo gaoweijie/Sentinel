@@ -28,6 +28,8 @@ import com.alibaba.csp.sentinel.init.InitFunc;
 import com.alibaba.csp.sentinel.init.InitOrder;
 
 /**
+ * 集群客户端的初始化
+ *
  * @author Eric Zhao
  * @since 1.4.0
  */

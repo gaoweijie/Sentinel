@@ -29,6 +29,8 @@ import com.alibaba.csp.sentinel.slots.block.degrade.circuitbreaker.CircuitBreake
 import com.alibaba.csp.sentinel.spi.Spi;
 
 /**
+ * 功能职责：根据前面 Slot 统计好的信息，以及预设的规则，来做熔断降级；
+ *
  * A {@link ProcessorSlot} dedicates to circuit breaking.
  *
  * @author Carpenter Lee

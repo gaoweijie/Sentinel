@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 功能职责：负责收集资源的路径，并将这些资源的调用路径，以树状结构存储起来，用于根据调用路径来限流降级；
+ *
  * </p>
  * This class will try to build the calling traces via
  * <ol>
@@ -128,14 +130,31 @@ import java.util.Map;
 public class NodeSelectorSlot extends AbstractLinkedProcessorSlot<Object> {
 
     /**
+     * 该map保存了DefaultNode，但是key是用的contextName，而不是resourceName，这是为什么呢？
+     * 试想一下，如果用resourceName来做map的key，那对于同一个资源resourceA来说，在context1中获取到的defaultNodeA和在context2中获取到的defaultNodeA是同一个，那么怎么在这两个context中对defaultNodeA进行更改呢，修改了一个必定会对另一个产生影响。
+     * 而如果用contextName来作为key，那对于同一个资源resourceA来说，在context1中获取到的是defaultNodeA1，在context2中获取到是defaultNodeA2，那在不同的context中对同一个资源可以使用不同的DefaultNode进行分别统计和计算，最后再通过ClusterNode进行合并就可以了。
+     * 所以在NodeSelectorSlot这个类里面，map里面保存的是contextName和DefaultNode的映射关系，目的是为了可以在不同的context对相同的资源进行分开统计。
+     *
+     * 同一个context中对同一个resource进行多次entry()调用时，会形式一颗调用树，这个树是通过CtEntry之间的parent/child关系维护的。
+     *
+     * 具体的调用链的原理分析可以参考另一篇文章：[限流降级神器-哨兵(Sentinel)的资源调用链原理分析](https://mp.weixin.qq.com/s/UEzwD22YC6jpp02foNSXnw)
+     *
      * {@link DefaultNode}s of the same resource in different context.
      */
-    private volatile Map<String, DefaultNode> map = new HashMap<String, DefaultNode>(10);
+    private volatile Map<String, DefaultNode> map = new HashMap<>(10);
 
+    /**
+     * 代码可以分解成下面这些步骤：
+     *  1）获取当前上下文对应的DefaultNode，如果没有的话会为当前的调用新生成一个DefaultNode节点，它的作用是对资源进行各种统计度量以便进行流控；
+     *  2）【可能跳过不执行】将新创建的DefaultNode节点，添加到context中，作为「entranceNode」或者「curEntry.parent.curNode」的子节点；
+     *  3）将DefaultNode节点，添加到context中，作为「curEntry」的curNode。
+     */
     @Override
     public void entry(Context context, ResourceWrapper resourceWrapper, Object obj, int count, boolean prioritized, Object... args)
         throws Throwable {
         /*
+         * 根据「上下文」的名称获取DefaultNode.多线程环境下，每个线程都会创建一个context，只要资源名相同，则context的名称也相同，那么获取到的节点就相同
+         *
          * It's interesting that we use context name rather resource name as the map key.
          *
          * Remember that same resource({@link ResourceWrapper#equals(Object)}) will share
@@ -158,18 +177,29 @@ public class NodeSelectorSlot extends AbstractLinkedProcessorSlot<Object> {
             synchronized (this) {
                 node = map.get(context.getName());
                 if (node == null) {
+                    // 如果当前「上下文」中没有该节点，则创建一个DefaultNode节点
                     node = new DefaultNode(resourceWrapper, null);
-                    HashMap<String, DefaultNode> cacheMap = new HashMap<String, DefaultNode>(map.size());
+                    HashMap<String, DefaultNode> cacheMap = new HashMap<>(map.size());
                     cacheMap.putAll(map);
                     cacheMap.put(context.getName(), node);
                     map = cacheMap;
                     // Build invocation tree
+                    /**
+                     * 将当前node作为「上下文」的最后一个节点的子节点添加进去
+                     *      如果context的curEntry.parent.curNode为null，则添加到entranceNode中去
+                     *      否则添加到context的curEntry.parent.curNode中去
+                     */
                     ((DefaultNode) context.getLastNode()).addChild(node);
                 }
 
             }
         }
 
+        /**
+         * 将该节点设置为「上下文」中的当前节点
+         * 实际是将当前节点赋值给context中curEntry的curNode
+         * 在Context的getLastNode中会用到在此处设置的curNode
+         */
         context.setCurNode(node);
         fireEntry(context, resourceWrapper, node, count, prioritized, args);
     }

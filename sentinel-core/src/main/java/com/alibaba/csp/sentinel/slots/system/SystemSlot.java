@@ -24,6 +24,8 @@ import com.alibaba.csp.sentinel.slotchain.ResourceWrapper;
 import com.alibaba.csp.sentinel.spi.Spi;
 
 /**
+ * 功能职责：根据总的请求统计信息（系统的状态），来控制总的入口流量，主要是防止系统被搞垮
+ *
  * A {@link ProcessorSlot} that dedicates to {@link SystemRule} checking.
  *
  * @author jialiang.linjl

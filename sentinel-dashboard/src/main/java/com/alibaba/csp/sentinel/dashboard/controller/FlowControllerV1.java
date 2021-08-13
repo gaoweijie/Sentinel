@@ -77,6 +77,8 @@ public class FlowControllerV1 {
             return Result.ofFail(-1, "port can't be null");
         }
         try {
+            // dashboard 是通过一个叫 SentinelApiClient 的类去指定的 ip 和 port 处获取数据的。
+            // 这个 ip 和 port 是前端页面直接提交给后端的，而前端页面又是通过 /app/{app}/machines.json 接口获取机器列表的。
             List<FlowRuleEntity> rules = sentinelApiClient.fetchFlowRuleOfMachine(app, ip, port);
             rules = repository.saveAll(rules);
             return Result.ofSuccess(rules);
